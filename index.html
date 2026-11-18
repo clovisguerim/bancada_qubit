@@ -154,6 +154,7 @@ footer.refs .author .links{display:flex;flex-wrap:wrap;gap:6px 18px}
   svg#cv{min-width:0}
   .question{font-size:1rem}
   .side .insp{order:3}
+  .side .insp.active{order:-1;border-color:var(--beam);box-shadow:0 0 0 2px color-mix(in srgb,var(--beam) 35%,transparent)}
 }
 /* svg */
 .wire{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-dasharray:7 6}
@@ -196,7 +197,8 @@ footer.refs .author .links{display:flex;flex-wrap:wrap;gap:6px 18px}
 
   <div class="bar">
     <div class="seg" role="group" aria-label="Nomes">
-      <button data-mode="bits" aria-pressed="true">Bits: 0/1 e +/−</button>
+      <button data-mode="aula" aria-pressed="true">Aula: leitor A e B</button>
+      <button data-mode="bits" aria-pressed="false">Computação: Z e X</button>
       <button data-mode="caixas" aria-pressed="false">Caixas: sabor e cor</button>
     </div>
     <label class="chk"><input type="checkbox" id="theory"> Mostrar previsão teórica</label>
@@ -315,6 +317,7 @@ const GATES = {
 
 /* ======== nomes ======== */
 const NAMES = {
+  aula:   { A:{name:'leitor A', long:'Leitor A', out:['0','1']}, B:{name:'leitor B', long:'Leitor B', out:['+','−']}, mix:'aleatórios', src:'Fonte' },
   bits:   { A:{name:'medir Z', long:'Leitor Z', out:['0','1']}, B:{name:'medir X', long:'Leitor X', out:['+','−']}, mix:'aleatórios', src:'Fonte' },
   caixas: { A:{name:'Sabor', long:'Caixa de sabor', out:['doce','amargo']}, B:{name:'Cor', long:'Caixa de cor', out:['branco','preto']}, mix:'aleatórios', src:'Fonte' }
 };
@@ -322,13 +325,13 @@ const SZ = { src:[120,64], reader:[110,80], join:[80,80], det:[134,64], block:[6
 const DETCOL = ['var(--c0)','var(--c1)','var(--c2)','var(--c3)'];
 
 /* ======== estado ======== */
-const st = { mode:'bits', theory:false, active:{kind:'fixed', i:0}, dirty:false, saved:[], delAsk:null, nodes:[], wires:[], seq:1, detSeq:1,
+const st = { mode:'aula', theory:false, active:{kind:'fixed', i:0}, dirty:false, saved:[], delAsk:null, nodes:[], wires:[], seq:1, detSeq:1,
              sel:null, pending:null, counts:{}, lost:0, log:[] };
 const N = () => NAMES[st.mode];
 const L = (b,k) => N()[b].out[k];
 const node = id => st.nodes.find(n => n.id === id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function srcLabel(v){ return v === 'mix' ? N().mix : (st.mode === 'bits' ? '|' + L(v[0], +v[1]) + '⟩' : L(v[0], +v[1])); }
+function srcLabel(v){ return v === 'mix' ? N().mix : (st.mode !== 'caixas' ? '|' + L(v[0], +v[1]) + '⟩' : L(v[0], +v[1])); }
 
 /* ======== experimentos ======== */
 function build(nodes, wires){
@@ -345,21 +348,21 @@ const interf = (m0,m1) => [
    {id:'r',type:'reader',x:600,y:160,basis:'B'},{id:'d1',type:'det',x:780,y:50,label:'D1'},{id:'d2',type:'det',x:780,y:168,label:'D2'}],
   [['s','o','a','i'],['a','0','j','a',m0],['a','1','j','b',m1],['j','o','r','i'],['r','0','d1','i'],['r','1','d2','i']] ];
 const PRESETS = [
-  { t:'1. Repetibilidade', q:'Mando |0⟩ no leitor Z, e o que sai 0 vai para outro leitor Z. Onde as partículas aparecem?', b:() => chain12('A') },
-  { t:'2. Z prevê X?', q:'Mando |0⟩ no leitor Z, e o que sai 0 vai para o leitor X. Saber Z ajuda a prever X?', b:() => chain12('B') },
-  { t:'3. Z, depois X, depois Z', q:'Mando |0⟩: separo em Z, separo em X e leio Z de novo. O resultado do primeiro Z se mantém?', b:() => [
+  { t:'1. Repetibilidade', q:'Mando |0⟩ no leitor A, e o que sai 0 vai para outro leitor A. Onde as partículas aparecem?', b:() => chain12('A') },
+  { t:'2. A prevê B?', q:'Mando |0⟩ no leitor A, e o que sai 0 vai para o leitor B. Saber A ajuda a prever B?', b:() => chain12('B') },
+  { t:'3. A, depois B, depois A', q:'Mando |0⟩: separo em A, depois os + no leitor B, e leio A de novo. Continua dando 0?', b:() => [
     [{id:'s',type:'src',x:30,y:420,src:'A0'},{id:'a1',type:'reader',x:200,y:412,basis:'A'},{id:'b',type:'reader',x:380,y:270,basis:'B'},
      {id:'a3',type:'reader',x:560,y:130,basis:'A'},{id:'d1',type:'det',x:780,y:30,label:'D1'},{id:'d2',type:'det',x:780,y:138,label:'D2'}],
     [['s','o','a1','i'],['a1','0','b','i'],['b','0','a3','i'],['a3','0','d1','i'],['a3','1','d2','i']] ] },
-  { t:'4. Interferômetro', q:'Entra com resultado fixo em X, passa por Z com os dois caminhos recombinados, e leio X. Onde aparecem?', b:() => interf() },
-  { t:'5. Barreira num caminho', q:'Mesma montagem com uma barreira num dos caminhos. Quantas chegam e onde aparecem?', b:() => interf('open','block') },
+  { t:'4. Interferômetro', q:'Mando |+⟩ num leitor A. Os dois caminhos se juntam de novo e vão para um leitor B. Onde aparecem?', b:() => interf() },
+  { t:'5. Barreira num caminho', q:'Mesma montagem, com uma barreira que absorve o caminho 1. Quantos chegam? O que sai no leitor B?', b:() => interf('open','block') },
   { t:'6. Observador nos caminhos', q:'Mesma montagem, mas com um observador que registra por qual caminho a partícula passou. E agora?', b:() => interf('watch','watch') },
-  { grp:2, t:'7. NOT quântico', q:'Começo em 0 e passo pela porta X. O que o leitor Z mostra?', b:() => gates('A0',['X']) },
-  { grp:2, t:'8. Hadamard', q:'Começo em 0 e passo pela porta H. O que o leitor Z mostra agora?', b:() => gates('A0',['H']) },
-  { grp:2, t:'9. H duas vezes', q:'Se uma porta H já dá 50/50, o que acontece com duas portas H seguidas?', b:() => gates('A0',['H','H']) },
-  { grp:2, t:'10. Observar entre os H', q:'Mesmas duas portas H, mas com um observador entre elas. O que muda?', b:() => gates('A0',['H','watch','H']) },
-  { grp:2, t:'11. Z escondido', q:'A porta Z não muda as chances de 0 e 1. Então colocar Z entre dois H faz alguma diferença?', b:() => gates('A0',['H','Z','H']) },
-  { grp:2, t:'12. Duas portas S', q:'A porta S só mexe na fase. Com duas portas S entre dois H, onde as partículas aparecem?', b:() => gates('A0',['H','S','S','H']) },
+  { grp:2, t:'7. Aplico X', q:'Entra |0⟩. Qual a probabilidade de medir 0? E de medir 1?', b:() => gates('A0',['X']) },
+  { grp:3, t:'8. Aplico H uma vez', q:'Entra |0⟩. Qual a probabilidade de medir 0? E de medir 1?', b:() => gates('A0',['H']) },
+  { grp:2, t:'9. Aplico H duas vezes', q:'Entra |0⟩. Qual a probabilidade de medir 0? E de medir 1?', b:() => gates('A0',['H','H']) },
+  { grp:3, t:'10. H, observador, H', q:'Entra |0⟩. Qual a probabilidade de medir 0? E de medir 1?', b:() => gates('A0',['H','watch','H']) },
+  { grp:2, t:'11. H, depois Z, depois H', q:'Entra |0⟩. Qual a probabilidade de medir 0? E de medir 1?', b:() => gates('A0',['H','Z','H']) },
+  { grp:3, t:'12. H, S, S, H', q:'Entra |0⟩. Qual a probabilidade de medir 0? E de medir 1?', b:() => gates('A0',['H','S','S','H']) },
 ];
 function gates(src, list, basis='A'){
   const nodes = [{id:'s',type:'src',x:30,y:240,src}], wires = []; let prev = 's', x = 200;
@@ -596,6 +599,7 @@ function renderSVG(){
 }
 function renderInsp(){
   const el = document.getElementById('insp'), n = N();
+  el.classList.toggle('active', !!(st.sel || st.pending || st.tool));
   const del = '<button class="tool danger" data-del>Remover</button>';
   if (st.tool){ el.innerHTML = `<h2>${st.tool === 'block' ? 'Colocando uma barreira' : 'Colocando um observador'}</h2><p>Clique num caminho tracejado para ${st.tool === 'block' ? 'colocar a barreira. Ela absorve as partículas que passam por ali.' : 'colocar o observador. Ele registra por qual caminho a partícula passou e deixa ela seguir.'}</p><p>Para cancelar, clique no fundo ou aperte Esc.</p>`; return; }
   if (st.pending){ el.innerHTML = '<h2>Ligando</h2><p>Agora clique numa entrada (círculo vazio). Clique no fundo para cancelar.</p>'; return; }
@@ -677,7 +681,7 @@ function renderLists(){
     o += `<optgroup label="${label}">` + PRESETS.map((p,i) => (p.grp || 1) !== g ? '' :
       `<option value="f:${i}"${a.kind==='fixed' && a.i===i ? ' selected' : ''}>${esc(p.t)}</option>`).join('') + '</optgroup>';
   };
-  grp('Experimentos da aula', 1); grp('Portas lógicas', 2);
+  grp('Experimentos da aula', 1); grp('Portas lógicas (aula)', 2); grp('Para casa', 3);
   if (st.saved.length) o += '<optgroup label="Meus experimentos">' + st.saved.map(x =>
       `<option value="s:${esc(x.id)}"${a.kind==='saved' && a.id===x.id ? ' selected' : ''}>${esc(x.title || 'Sem nome')}</option>`).join('') + '</optgroup>';
   document.getElementById('expSel').innerHTML = o;
@@ -702,6 +706,8 @@ function renderAll(){
   document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === st.mode));
   renderLists();
   document.querySelector('[data-add="src"]').disabled = st.nodes.some(n => n.type === 'src');
+  document.querySelector('[data-add="readerA"]').textContent = N().A.long;
+  document.querySelector('[data-add="readerB"]').textContent = N().B.long;
   renderSVG(); renderInsp(); renderResults();
 }
 
