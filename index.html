@@ -639,18 +639,23 @@ function renderResults(){
   document.getElementById('summary').textContent = !th ? 'Coloque uma fonte na bancada.' : total === 0
     ? 'Nenhuma partícula enviada ainda. Faça sua previsão e envie.'
     : `Enviadas ${total}. Chegaram aos detectores ${arrived}. Perdidas no caminho ${st.lost}.`;
-  const tA = th ? th.total - th.lost : 0;
-  const rows = dets.map((d,i) => ({name:d.label, v:st.counts[d.id]||0, base:arrived, color:DETCOL[i%4],
-      t: th && tA > 1e-9 ? th.det[d.id]/tA : null, tn:'das que chegam'}));
-  rows.push({name:'perdidas', v:st.lost, base:total, color:'var(--lost)', t: th ? th.lost/th.total : null, tn:'do total enviado'});
+  /* todas as barras contam sobre o total enviado, para somarem 100% */
+  const tA = th ? th.total - th.lost : 0, someLost = th && th.lost > 1e-9 || st.lost > 0;
+  const rows = dets.map((d,i) => ({name:d.label, v:st.counts[d.id]||0, color:DETCOL[i%4],
+      t: th ? th.det[d.id]/th.total : null, ta: th && tA > 1e-9 ? th.det[d.id]/tA : null, det:true}));
+  rows.push({name:'perdidas', v:st.lost, color:'var(--lost)', t: th ? th.lost/th.total : null});
   document.getElementById('bars').innerHTML = rows.map(r => {
-    const p = r.base ? r.v/r.base : 0, showT = st.theory && r.t !== null;
+    const p = total ? r.v/total : 0, showT = st.theory && r.t !== null;
+    const pa = arrived ? Math.round(100*r.v/arrived) : null;
+    let note = [];
+    if (r.det && someLost && pa !== null) note.push(`${pa}% das que chegaram`);
+    if (showT) note.push(`Previsão: ${Math.round(r.t*100)}%` + (r.det && someLost && r.ta !== null ? ` (${Math.round(r.ta*100)}% das que chegam)` : ''));
     return `<div class="row"><span class="name">${esc(r.name)}</span>
       <div class="track2"><div class="fill" style="width:${(p*100).toFixed(1)}%;background:${r.color}"></div>
       ${showT ? `<div class="theo" style="left:calc(${(r.t*100).toFixed(1)}% - 1.5px)"></div>` : ''}</div>
-      <span class="pct">${r.base ? Math.round(p*100)+'%' : '–'}</span>
-      ${showT ? `<span class="theo-note">Previsão: ${Math.round(r.t*100)}% ${r.tn}</span>` : ''}</div>`;
-  }).join('');
+      <span class="pct">${total ? Math.round(p*100)+'%' : '–'}</span>
+      ${note.length ? `<span class="theo-note">${note.join('<br>')}</span>` : ''}</div>`;
+  }).join('') + (total ? '<p class="theo-note" style="margin:4px 0 0">As porcentagens das barras são sobre o total enviado e somam 100%.</p>' : '');
   document.getElementById('warn').style.display = th && th.warn ? 'block' : 'none';
   const ci = id => DETCOL[dets.findIndex(d => d.id === id) % 4];
   document.getElementById('log').innerHTML = st.log.length ? st.log.map(e => e.lost
