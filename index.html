@@ -169,6 +169,7 @@ footer.refs .author .links{display:flex;flex-wrap:wrap;gap:6px 18px}
 .nbox.gbox{stroke:var(--c2);stroke-width:3.5}
 .nbox.gbox.sel{stroke:var(--beam);stroke-width:4}
 .t2{font-size:13px;fill:var(--muted)}
+.ts{font-size:19px;font-weight:700;fill:var(--beam)}
 .tj{font-size:14px;font-weight:700;fill:var(--panel)}
 .tp{font-size:14px;font-weight:700;fill:var(--ink)}
 .pin{fill:var(--panel);stroke:var(--ink);stroke-width:2}
@@ -327,7 +328,7 @@ const N = () => NAMES[st.mode];
 const L = (b,k) => N()[b].out[k];
 const node = id => st.nodes.find(n => n.id === id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function srcLabel(v){ return v === 'mix' ? N().mix : L(v[0], +v[1]); }
+function srcLabel(v){ return v === 'mix' ? N().mix : (st.mode === 'bits' ? '|' + L(v[0], +v[1]) + '⟩' : L(v[0], +v[1])); }
 
 /* ======== experimentos ======== */
 function build(nodes, wires){
@@ -336,7 +337,7 @@ function build(nodes, wires){
   st.wires = wires.map((w,i) => ({ id:'w'+i, from:{node:w[0],port:w[1]}, to:{node:w[2],port:w[3]}, mode:w[4]||'open' }));
 }
 const chain12 = b2 => [
-  [{id:'s',type:'src',x:30,y:300,src:'mix'},{id:'a1',type:'reader',x:220,y:292,basis:'A'},
+  [{id:'s',type:'src',x:30,y:300,src:'A0'},{id:'a1',type:'reader',x:220,y:292,basis:'A'},
    {id:'a2',type:'reader',x:420,y:140,basis:b2},{id:'d1',type:'det',x:640,y:40,label:'D1'},{id:'d2',type:'det',x:640,y:148,label:'D2'}],
   [['s','o','a1','i'],['a1','0','a2','i'],['a2','0','d1','i'],['a2','1','d2','i']] ];
 const interf = (m0,m1) => [
@@ -344,10 +345,10 @@ const interf = (m0,m1) => [
    {id:'r',type:'reader',x:600,y:160,basis:'B'},{id:'d1',type:'det',x:780,y:50,label:'D1'},{id:'d2',type:'det',x:780,y:168,label:'D2'}],
   [['s','o','a','i'],['a','0','j','a',m0],['a','1','j','b',m1],['j','o','r','i'],['r','0','d1','i'],['r','1','d2','i']] ];
 const PRESETS = [
-  { t:'1. Repetibilidade', q:'Separo uma saída do primeiro leitor Z e leio de novo com Z. Onde as partículas aparecem?', b:() => chain12('A') },
-  { t:'2. Z prevê X?', q:'Pego uma saída do leitor Z e leio com X. Saber Z ajuda a prever X?', b:() => chain12('B') },
-  { t:'3. Z, depois X, depois Z', q:'Separo em Z, separo em X, e leio Z de novo. O resultado do primeiro Z se mantém?', b:() => [
-    [{id:'s',type:'src',x:30,y:420,src:'mix'},{id:'a1',type:'reader',x:200,y:412,basis:'A'},{id:'b',type:'reader',x:380,y:270,basis:'B'},
+  { t:'1. Repetibilidade', q:'Mando |0⟩ no leitor Z, e o que sai 0 vai para outro leitor Z. Onde as partículas aparecem?', b:() => chain12('A') },
+  { t:'2. Z prevê X?', q:'Mando |0⟩ no leitor Z, e o que sai 0 vai para o leitor X. Saber Z ajuda a prever X?', b:() => chain12('B') },
+  { t:'3. Z, depois X, depois Z', q:'Mando |0⟩: separo em Z, separo em X e leio Z de novo. O resultado do primeiro Z se mantém?', b:() => [
+    [{id:'s',type:'src',x:30,y:420,src:'A0'},{id:'a1',type:'reader',x:200,y:412,basis:'A'},{id:'b',type:'reader',x:380,y:270,basis:'B'},
      {id:'a3',type:'reader',x:560,y:130,basis:'A'},{id:'d1',type:'det',x:780,y:30,label:'D1'},{id:'d2',type:'det',x:780,y:138,label:'D2'}],
     [['s','o','a1','i'],['a1','0','b','i'],['b','0','a3','i'],['a3','0','d1','i'],['a3','1','d2','i']] ] },
   { t:'4. Interferômetro', q:'Entra com resultado fixo em X, passa por Z com os dois caminhos recombinados, e leio X. Onde aparecem?', b:() => interf() },
@@ -539,7 +540,7 @@ function renderSVG(){
     if (nd.type === 'src'){
       h += `<rect class="nbox${sel?' sel':''}" x="${nd.x}" y="${nd.y}" width="${w}" height="${hh}" rx="10"/>
             <text class="t1" x="${nd.x+14}" y="${nd.y+26}">${n.src}</text>
-            <text class="t2" x="${nd.x+14}" y="${nd.y+48}">${esc(srcLabel(nd.src))}</text>`;
+            <text class="ts" x="${nd.x+14}" y="${nd.y+50}">${esc(srcLabel(nd.src))}</text>`;
     } else if (nd.type === 'reader'){
       h += `<rect class="nbox${sel?' sel':''}" x="${nd.x}" y="${nd.y}" width="${w}" height="${hh}" rx="4" stroke-width="5"/>
             <text class="t1" x="${nd.x+w/2}" y="${nd.y+hh/2+6}" text-anchor="middle">${esc(n[nd.basis].name)}</text>
